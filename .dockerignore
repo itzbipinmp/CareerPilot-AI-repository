@@ -1,0 +1,15 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+careerpilot.db
+careerpilot.db-*
+.env
+.env.*
+!.env.example
+output
+tmp
+uploads
+instance
+tests
+.pytest_cache

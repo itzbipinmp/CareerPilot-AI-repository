@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Local secrets and configuration
+.env
+.env.*
+!.env.example
+
+# Private application data and generated files
+careerpilot.db
+careerpilot.db-*
+*.sqlite
+*.sqlite3
+output/
+tmp/
+uploads/
+instance/

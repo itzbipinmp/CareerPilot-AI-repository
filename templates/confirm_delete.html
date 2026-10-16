@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Delete analysis — CareerPilot AI{% endblock %}
+{% block content %}
+<section class="delete-confirm-card">
+  <a class="back-link" href="{{ url_for('result', analysis_id=analysis.id) }}">← Back to career brief</a>
+  <span class="delete-confirm-icon">!</span>
+  <div class="eyebrow muted">REMOVE SAVED ANALYSIS</div>
+  <h1>Delete “{{ analysis.job_title }}”?</h1>
+  <p>This removes the career brief and the resume and job description text saved with it. You can’t undo this.</p>
+  <div class="delete-record"><strong>{{ analysis.job_title }}</strong><span>{{ analysis.resume_name }} · {{ analysis.created_at[:10] }}</span></div>
+  <div class="delete-confirm-actions">
+    <a class="secondary-button" href="{{ url_for('result', analysis_id=analysis.id) }}">Keep analysis</a>
+    <form method="post" action="{{ url_for('remove_analysis', analysis_id=analysis.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger-button" type="submit">Delete analysis</button></form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Your Career Brief — CareerPilot AI{% endblock %}
+{% block content %}
+<div class="result-top">
+  <a class="back-link" href="{{ url_for('index') }}">← New analysis</a>
+  <span class="result-date">{{ analysis.created_at[:10] }} · {{ analysis.resume_name }}</span>
+</div>
+<section class="result-heading">
+  <div class="eyebrow"><span class="spark">✦</span> YOUR CAREER BRIEF</div>
+  <h1>{{ analysis.job_title }}</h1>
+  <p>A clear review of your resume for this role, plus a separate resume you can download as PDF.</p>
+</section>
+
+<section class="result-grid">
+  <article class="score-card">
+    <div class="score-top">
+      <div><div class="eyebrow muted">{% if analysis.report.requirements %}RESUME EVIDENCE REVIEW{% else %}LIMITED LOCAL ESTIMATE{% endif %}</div><h2>{% if analysis.report.requirements %}Evidence-backed role fit{% else %}Keyword-based role estimate{% endif %}</h2></div>
+      <span class="score-ring"><b>{% if analysis.report.requirements and analysis.report.match_score is not none %}{{ analysis.report.match_score }}{% else %}--{% endif %}</b><small>{% if analysis.report.requirements and analysis.report.match_score is not none %}%{% else %}AI needed{% endif %}</small></span>
+    </div>
+    {% if analysis.report.requirements %}<p>{{ analysis.report.summary }}</p>{% else %}
+    <p>This analysis used local keyword matching. It found {{ analysis.report.matched_skills|length }} of {{ (analysis.report.matched_skills|length) + (analysis.report.skill_gaps|length) }} recognized skill terms in your resume. That is not enough to produce a trustworthy overall fit percentage; connect an AI model for a requirement-by-requirement review.</p>
+    {% endif %}
+    {% if analysis.report.requirements %}
+    <div class="requirement-evidence" aria-label="Job requirements checked against resume evidence">
+      <h3>What the job asks for, checked against your resume</h3>
+      {% for item in analysis.report.requirements %}
+      <article class="requirement-evidence-item">
+        <div><span class="requirement-priority">{{ item.priority }}</span><strong>{{ item.requirement }}</strong><span class="requirement-status">{{ item.evidence_label }}</span></div>
+        {% if item.evidence_quote %}<blockquote>“{{ item.evidence_quote }}”</blockquote>{% endif %}
+        <p>{{ item.reason }}</p>
+      </article>
+      {% endfor %}
+    </div>
+    {% elif analysis.report.score_breakdown and analysis.report.requirements %}
+    <div class="score-breakdown" aria-label="Role fit score breakdown">
+      {% for key, item in analysis.report.score_breakdown.items() %}
+      <div class="score-row">
+        <div class="score-row-label"><strong>{{ item.label }}</strong><small>{% if item.weight %}{{ item.weight }}% of estimate{% else %}Not specified in the posting{% endif %}</small></div>
+        <div class="score-track" role="progressbar" aria-label="{{ item.label }}" aria-valuenow="{{ item.score or 0 }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ item.score or 0 }}%"></span></div>
+        <b class="score-value">{% if item.score is none %}N/A{% else %}{{ item.score }}%{% endif %}</b>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="provider-note">{% if analysis.report.requirements %}Prepared with {{ analysis.report.provider }} · {{ analysis.report.score_method or 'Document-based estimate' }}. This is an evidence comparison, not a prediction of interview or hiring success. Review each quotation and confirm it reflects your experience.{% else %}Prepared with {{ analysis.report.provider }} · limited local scan. No reliable percentage is available until an AI requirement review is connected.{% endif %}</div>
+    {% if analysis.report.provider_issue %}<p class="provider-warning" role="status"><strong>AI review did not run.</strong> {{ analysis.report.provider_issue }}</p>{% if llm_enabled %}<form class="retry-ai-form" method="post" action="{{ url_for('retry_ai_analysis', analysis_id=analysis.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><p>Retry this saved resume and job description with {{ llm_provider }} when the service is available.</p><button class="secondary-button" type="submit">Retry AI review <span>↻</span></button></form>{% endif %}{% endif %}
+  </article>
+
+  <article class="report-card resume-review-card">
+    <div class="report-title"><span class="report-icon amber">⌕</span><div><h3>What you could improve</h3><p>Suggestions based on the text we could read</p></div></div>
+    <p class="review-caveat">These are opportunities to review, not guaranteed mistakes. Check the original resume too; some PDF layouts don’t extract cleanly.</p>
+    <ul class="review-list">
+      {% for finding in analysis.report.resume_review %}
+      <li><strong>{{ finding.title }}</strong><p>{{ finding.detail }}</p><span>{{ finding.suggestion }}</span></li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="report-card tailored-card">
+    <div class="report-title"><span class="report-icon violet">✦</span><div><h3>Your tailored resume</h3><p>Clean, ATS-friendly PDF · targeted to {{ analysis.job_title }}</p></div></div>
+    <p class="draft-caveat">This should read like your resume, improved for this role. Review each proposed bullet before including it. Your experience, dates, and education stay grounded in the original.</p>
+    <form class="resume-editor" method="post" action="{{ url_for('download_tailored_resume', analysis_id=analysis.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="resume-edit-section"><span class="edit-step">01</span><div><strong>Professional profile</strong><small>Written for {{ analysis.job_title }} · edit anything that doesn’t sound like you</small></div></div>
+      <label class="field-label" for="resume-summary">PROFILE SUMMARY</label>
+      <textarea id="resume-summary" name="summary" rows="4" maxlength="1200" placeholder="Write a short profile using only your real experience.">{{ analysis.report.tailored_resume.summary or '' }}</textarea>
+      <label class="field-label" for="resume-skills">RELEVANT SKILLS <span>Only skills supported by your resume</span></label>
+      <input class="text-input" id="resume-skills" name="skills" maxlength="800" value="{{ analysis.report.tailored_resume.skills|join(', ') }}">
+      <div class="resume-edit-section"><span class="edit-step">02</span><div><strong>Experience and project bullets</strong><small>Compare your original wording with the role-focused suggestion</small></div></div>
+      {% if analysis.report.tailored_resume.bullet_rewrites %}
+        <div class="bullet-rewrite-list">
+        {% for rewrite in analysis.report.tailored_resume.bullet_rewrites %}
+          <article class="bullet-rewrite">
+            <div class="rewrite-source"><span>FROM YOUR RESUME</span><p>{{ rewrite.source }}</p></div>
+            <div class="rewrite-suggestion"><label class="field-label" for="rewritten-bullet-{{ loop.index0 }}">SUGGESTED VERSION <span>Edit or keep your original</span></label><textarea id="rewritten-bullet-{{ loop.index0 }}" name="rewritten_bullet_{{ loop.index0 }}" rows="3" maxlength="600">{{ rewrite.suggestion }}</textarea><small class="rewrite-reason">Why: {{ rewrite.reason }}</small></div>
+          </article>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="local-tailoring-note"><strong>No experience lines were rewritten.</strong><p>{% if analysis.report.tailoring_method and 'Local' not in analysis.report.tailoring_method %}The model did not find a safe rewrite. Your original experience and project wording will be preserved.{% else %}This analysis used Local only, which can select and organize evidence but cannot rewrite it with an AI model. Your original wording will be preserved in the PDF.{% endif %}</p></div>
+      {% endif %}
+      <p class="draft-note">The PDF keeps your resume sections and details, prioritizes relevant skills, and uses only the edits above that you choose to submit. It is never sent to an employer.</p>
+      <div class="draft-actions"><button class="primary-button" type="submit">Create resume PDF <span>↓</span></button></div>
+    </form>
+  </article>
+
+  <article class="report-card">
+    <div class="report-title"><span class="report-icon green">✓</span><div><h3>Skills already shown</h3><p>Found in both the resume and role description</p></div></div>
+    {% if analysis.report.matched_skills %}<div class="skill-tags">{% for skill in analysis.report.matched_skills %}<span>{{ skill }}</span>{% endfor %}</div>
+    {% else %}<p class="empty-note">No clear skill keywords matched yet. Your experience may still be relevant; compare the requirements with your resume manually.</p>{% endif %}
+  </article>
+
+  <article class="report-card">
+    <div class="report-title"><span class="report-icon amber">↗</span><div><h3>Skills to explore</h3><p>Ideas for your next learning step</p></div></div>
+    {% if analysis.report.skill_gaps %}<ul class="gap-list">{% for item in analysis.report.skill_gaps %}<li><strong>{{ item.skill }}</strong><span>{{ item.next_step }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="empty-note">No obvious skill gaps found in the terms we checked. You could add clearer evidence for your existing skills.</p>{% endif %}
+  </article>
+
+  <article class="report-card interview-card">
+    <div class="report-title"><span class="report-icon violet">✦</span><div><h3>Practice for the conversation</h3><p>Questions grounded in this role</p></div></div>
+    <ol class="question-list">{% for question in analysis.report.interview_questions %}<li>{{ question }}</li>{% endfor %}</ol>
+  </article>
+
+  <article class="report-card evidence-card">
+    <div class="report-title"><span class="report-icon blue">⌕</span><div><h3>Resume evidence we found</h3><p>Relevant passages retrieved from your resume</p></div></div>
+    {% if analysis.report.evidence %}<ul class="evidence-list">{% for passage in analysis.report.evidence %}<li>{{ passage }}</li>{% endfor %}</ul>
+    {% else %}<p class="empty-note">No resume passages could be extracted.</p>{% endif %}
+  </article>
+</section>
+
+<div class="result-actions"><a class="delete-link result-delete" href="{{ url_for('confirm_delete', analysis_id=analysis.id) }}">Delete this analysis</a><a class="secondary-button" href="{{ url_for('history') }}">View my analyses</a><a class="primary-button" href="{{ url_for('index') }}">Explore another role <span>→</span></a></div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}My analyses — CareerPilot AI{% endblock %}
+{% block content %}
+<section class="history-heading"><a class="back-link" href="{{ url_for('index') }}">← Workspace</a><div class="eyebrow muted">YOUR CAREER JOURNEY</div><h1>My analyses</h1><p>Each role you explore is saved in this app’s database.</p></section>
+{% if analyses %}<div class="history-list">{% for item in analyses %}<div class="history-item"><a class="history-main" href="{{ url_for('result', analysis_id=item.id) }}"><span class="history-mark">✳</span><span class="recent-info"><b>{{ item.job_title }}</b><small>{{ item.resume_name }} · {{ item.created_at[:10] }}</small></span><span class="recent-score">{% if item.report.requirements and item.report.match_score is not none %}{{ item.report.match_score }}<small>% fit</small>{% else %}AI needed<small>for fit score</small>{% endif %}</span><span class="arrow">→</span></a><a class="delete-link" href="{{ url_for('confirm_delete', analysis_id=item.id) }}" aria-label="Delete {{ item.job_title }} analysis">Delete</a></div>{% endfor %}</div>{% else %}<div class="empty-state"><span>✧</span><h2>Your next step starts here</h2><p>Once you analyze a role, your career brief will show up here.</p><a class="primary-button" href="{{ url_for('index') }}">Start an analysis <span>→</span></a></div>{% endif %}
+{% endblock %}

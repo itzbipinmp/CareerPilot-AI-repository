@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}CareerPilot AI — Find your next opportunity{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy"><div class="eyebrow"><span class="spark">✦</span> YOUR PERSONAL JOB SEARCH ASSISTANT</div>
+    <h1>Make your next move<br><em>with confidence.</em></h1>
+    <p>Bring a resume and a role you’re curious about. Get a clear read on your fit, the skills to build, and what to say in the interview.</p>
+    <div class="hero-note"><span class="note-icon">✧</span><span><strong>Built around your story</strong><br>Evidence from your resume, not generic advice.</span></div>
+  </div>
+  <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><div class="orbit-core"><span>✳</span></div><div class="orbit-dot dot-a"></div><div class="orbit-dot dot-b"></div><div class="orbit-dot dot-c"></div><div class="float-card card-top"><span class="mini-icon violet">✦</span><span><b>Know your fit</b><small>Skills &amp; experience</small></span></div><div class="float-card card-bottom"><span class="mini-icon green">↗</span><span><b>Build your edge</b><small>One clear next step</small></span></div></div>
+</section>
+<section class="workspace-section">
+  <div class="section-heading"><div><div class="eyebrow muted">LET’S GET STARTED</div><h2>Your next opportunity</h2></div><span class="step-label"><span>01</span> OF 01</span></div>
+  <form class="analysis-form" method="post" action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-card resume-card"><div class="card-heading"><span class="number-pill">01</span><div><h3>Bring your experience</h3><p>Start with the resume you have today.</p></div></div>
+        <label class="upload-box" id="upload-box" for="resume"><span class="upload-icon">↑</span><strong id="upload-title">Drop your resume here</strong><span id="upload-subtitle">or <u>browse files</u></span><small>PDF, DOCX, or TXT · up to 8 MB</small><input id="resume" name="resume" type="file" accept=".pdf,.docx,.txt" required></label>
+        <p id="upload-error" class="upload-error" role="alert" hidden></p>
+        <div class="privacy-hint"><span>♢</span> Resume text is saved with your analysis in this app’s database.</div>
+      </div>
+      <div class="form-card role-card"><div class="card-heading"><span class="number-pill">02</span><div><h3>Choose a role</h3><p>Paste the job details you want to explore.</p></div></div>
+        <label class="field-label" for="job_title">ROLE TITLE <span>Optional</span></label><input class="text-input" id="job_title" name="job_title" value="{{ job_title or '' }}" placeholder="e.g. Junior Data Analyst">
+        <label class="field-label description-label" for="job_description">JOB DESCRIPTION</label><textarea id="job_description" name="job_description" rows="7" minlength="80" required aria-describedby="description-help description-count" placeholder="Paste the full job description — responsibilities, qualifications, and skills. Longer descriptions usually give a more useful comparison.">{{ job_description or '' }}</textarea>
+        <div class="field-foot"><span id="description-help">At least 80 characters</span><span id="description-count" aria-live="polite">0 / 80</span></div>
+      </div>
+    </div>
+    <div class="submit-row"><span><span class="secure-dot">●</span> Saved in the app’s local database</span><button id="submit-button" class="primary-button" type="submit">Build my career brief <span>→</span></button></div>
+  </form>
+  <p class="score-disclaimer">The role-fit estimate weighs job requirements, examples in your resume, and stated qualifications. It compares documents; it is not a hiring prediction.</p>
+  <p class="data-note">{% if llm_enabled %}When you request an analysis, your resume text and the job description are sent to {{ llm_provider }} for review.{% else %}Local analysis is ready. No AI provider is connected.{% endif %}</p>
+</section>
+{% if analyses %}<section class="recent-section"><div class="section-heading"><div><div class="eyebrow muted">PICK UP WHERE YOU LEFT OFF</div><h2>Recent analyses</h2></div><a class="text-link" href="{{ url_for('history') }}">View all →</a></div><div class="recent-list">{% for item in analyses %}<a class="recent-item" href="{{ url_for('result', analysis_id=item.id) }}"><span class="recent-icon">✳</span><span class="recent-info"><b>{{ item.job_title }}</b><small>{{ item.resume_name }} · {{ item.created_at[:10] }}</small></span><span class="recent-score">{% if item.report.requirements and item.report.match_score is not none %}{{ item.report.match_score }}<small>% match</small>{% else %}AI needed<small>for fit score</small>{% endif %}</span><span class="arrow">→</span></a>{% endfor %}</div></section>{% endif %}
+{% endblock %}
